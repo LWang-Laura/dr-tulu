@@ -210,7 +210,6 @@ def evaluate_answers_with_hle(answers_data: List[Dict[str, Any]],
                 
             except Exception as e:
                 print(f"  Error evaluating answer: {e}")
-                breakpoint()
                 evaluation = {
                     'num_rubrics_provided': num_rubrics,
                     'answer_length': len(answer_text),
@@ -708,10 +707,11 @@ def main():
     """Main function to evaluate generated answers with HLE reward."""
     # File paths
     no_reasoning = False
-    generated_answers_file = "./generated_answers/generated_answers.jsonl"
+    generated_answers_file = "./generated_answers/drtulu-sft-8b-example.sonl"
+    # generated_answers_file = "./generated_answers/example.jsonl"
     reference_answers_file = "./generated_reference_answers/reference_answers.jsonl"
     hle_output_file = "./evaluation_results/hle_evaluation_results.jsonl" if not no_reasoning else "./evaluation_results/hle_evaluation_results_direct_socre.jsonl"
-    rubric_output_file = "./evaluation_results/rubric_evaluation_results.jsonl"
+    rubric_output_file = "./evaluation_results/example-results.jsonl"
     
     # Check if input file exists
     if not os.path.exists(generated_answers_file):
@@ -720,10 +720,21 @@ def main():
         return
     
     # Choose evaluation type
-    evaluation_type = input("Choose evaluation type (hle/rubric): ").strip().lower()
-    if evaluation_type not in ["hle", "rubric"]:
-        print("Invalid evaluation type. Using 'hle' as default.")
-        evaluation_type = "hle"
+    # evaluation_type = input("Choose evaluation type (hle/rubric): ").strip().lower()
+    # if evaluation_type not in ["hle", "rubric"]:
+    #     print("Invalid evaluation type. Using 'hle' as default.")
+    #     evaluation_type = "hle"
+    
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--judge_mode", choices=["rubric", "hle"], default=None)
+    args = parser.parse_args()
+
+    if args.judge_mode is None:
+        evaluation_type = input("Use rubric or hle? ").strip().lower()
+    else:
+        evaluation_type = args.judge_mode
     
     output_file = hle_output_file if evaluation_type == "hle" else rubric_output_file
     

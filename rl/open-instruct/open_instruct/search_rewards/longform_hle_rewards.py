@@ -6,7 +6,7 @@ from typing import Any, Dict
 # from .judge_prompts import HLE_JUDGE_PROMPT, extract_hle_judge_response_from_response
 from .utils.judge_prompts import HLE_JUDGE_SCORE_PROMPT as HLE_JUDGE_PROMPT, extract_hle_score_judge_response_from_response as extract_hle_judge_response_from_response
 from .utils.judge_prompts import HLE_JUDGE_SCORE_NO_REASONING_PROMPT as HLE_JUDGE_PROMPT_NO_REASONING
-from .utils.run_utils import run_litellm
+from .utils.run_utils import run_litellm, get_default_judge_model
 from .utils.citation_utils import score_in_context_citations
 from .utils.format_utils import extract_answer_context_citations
 
@@ -20,8 +20,8 @@ def hle_judge_reward(question: str, response: str, correct_answer: str, no_reaso
     else:
         judge_prompt = HLE_JUDGE_PROMPT.format(question=question, response=response, correct_answer=correct_answer)
     judge_response = run_litellm(
-        model_name=os.environ.get("HLE_JUDGE_MODEL", "gpt-4.1"), 
-        system_prompt=None, 
+        model_name=os.environ.get("HLE_JUDGE_MODEL") or get_default_judge_model(),
+        system_prompt=None,
         user_prompt=judge_prompt,
     )
     return judge_response
