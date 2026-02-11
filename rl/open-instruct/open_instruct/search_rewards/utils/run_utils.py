@@ -14,6 +14,21 @@ litellm.drop_params = True
 
 LOGGER = logging.getLogger(__name__)
 
+# Default judge model when using local vLLM (no OpenAI key). Use openai/ prefix for OpenAI-compatible endpoints.
+DEFAULT_LOCAL_JUDGE_MODEL = "openai/Qwen/Qwen3-8B"
+
+
+def _get_judge_api_base() -> Optional[str]:
+    """Return judge API base URL if using local vLLM/OpenAI-compatible server (no OpenAI key)."""
+    return os.environ.get("LITELLM_JUDGE_API_BASE") or os.environ.get("HOSTED_VLLM_API_BASE")
+
+
+def get_default_judge_model(env_var: str = "HLE_JUDGE_MODEL") -> str:
+    """Return default judge model: Qwen3 when local API base is set, else gpt-4.1."""
+    if _get_judge_api_base():
+        return DEFAULT_LOCAL_JUDGE_MODEL
+    return "gpt-4.1"
+
 
 # Per-event-loop concurrency control for LiteLLM async calls to avoid event loop binding issues
 _LITELLM_SEMAPHORES = weakref.WeakKeyDictionary()
@@ -208,7 +223,18 @@ def run_litellm(
     chat_kwargs["frequency_penalty"] = chat_kwargs.get("frequency_penalty", 0.0)
     chat_kwargs["presence_penalty"] = chat_kwargs.get("presence_penalty", 0.0)
     chat_kwargs["num_retries"] = chat_kwargs.get("num_retries", 5)
-    chat_kwargs["fallbacks"] = chat_kwargs.get("fallbacks", ["gpt-4.1-mini"])
+    judge_base = _get_judge_api_base()
+    if judge_base:
+        # Local vLLM/OpenAI-compatible server: no OpenAI key, no cloud fallbacks
+        base = judge_base.rstrip("/")
+        chat_kwargs["api_base"] = base if base.endswith("/v1") else base + "/v1"
+        # Use env LITELLM_JUDGE_API_KEY if set; else "none" (avoids 403 from servers that reject "dummy")
+        chat_kwargs["api_key"] = chat_kwargs.get(
+            "api_key", os.environ.get("LITELLM_JUDGE_API_KEY", "none")
+        )
+        chat_kwargs["fallbacks"] = chat_kwargs.get("fallbacks", [])
+    else:
+        chat_kwargs["fallbacks"] = chat_kwargs.get("fallbacks", ["gpt-4.1-mini"])
 
     # Prepare messages
     msgs = (
@@ -227,7 +253,7 @@ def run_litellm(
             model=model_name,
             **chat_kwargs,
         )
-    except:
+    except Exception:
         # if we get an error, return an empty string
         return ""
 
@@ -265,7 +291,16 @@ async def run_litellm_async(
     chat_kwargs["frequency_penalty"] = chat_kwargs.get("frequency_penalty", 0.0)
     chat_kwargs["presence_penalty"] = chat_kwargs.get("presence_penalty", 0.0)
     chat_kwargs["num_retries"] = chat_kwargs.get("num_retries", 5)
-    chat_kwargs["fallbacks"] = chat_kwargs.get("fallbacks", [])
+    judge_base = _get_judge_api_base()
+    if judge_base:
+        base = judge_base.rstrip("/")
+        chat_kwargs["api_base"] = base if base.endswith("/v1") else base + "/v1"
+        chat_kwargs["api_key"] = chat_kwargs.get(
+            "api_key", os.environ.get("LITELLM_JUDGE_API_KEY", "none")
+        )
+        chat_kwargs["fallbacks"] = chat_kwargs.get("fallbacks", [])
+    else:
+        chat_kwargs["fallbacks"] = chat_kwargs.get("fallbacks", [])
 
     # Prepare messages
     if messages is not None:

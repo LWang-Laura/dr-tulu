@@ -3,7 +3,7 @@ import os
 import asyncio
 from typing import Dict, List
 
-from open_instruct.search_rewards.utils.run_utils import run_litellm, run_litellm_async
+from open_instruct.search_rewards.utils.run_utils import run_litellm, run_litellm_async, get_default_judge_model
 
 
 citation_recall_has_citation_prompt = """You are an expert in evaluating text quality. You will receive a user's question about an uploaded document, a factual statement from an AI assistant's response based on that document, and a snippet from the document (since the document is too long to display in full). Your task is to carefully assess whether this statement is supported by the snippet. Please use the following scale to generate your rating:
@@ -179,7 +179,7 @@ def score_with_citation_recall(question: str, claim: str, concatenated_citations
         question=question, statement=claim, concatenated_cited_snippets=concatenated_citations
     )
     response = run_litellm(
-        model_name=os.environ.get("CITATION_JUDGE_MODEL", "gpt-4o-mini"),
+        model_name=os.environ.get("CITATION_JUDGE_MODEL") or get_default_judge_model(),
         system_prompt=None,
         user_prompt=user_prompt,
         max_tokens=800,
@@ -195,7 +195,7 @@ def score_no_citation_recall(question: str, claim: str, full_response: str) -> f
         question=question, statement=claim, full_response=full_response
     )
     response = run_litellm(
-        model_name=os.environ.get("CITATION_JUDGE_MODEL", "gpt-4o-mini"),
+        model_name=os.environ.get("CITATION_JUDGE_MODEL") or get_default_judge_model(),
         system_prompt=None,
         user_prompt=user_prompt,
         max_tokens=800,
@@ -214,7 +214,7 @@ def score_citation_precision(question: str, claim: str, concatenated_citations: 
         question=question, statement=claim, concatenated_cited_snippets=concatenated_citations
     )
     response = run_litellm(
-        model_name=os.environ.get("CITATION_JUDGE_MODEL", "gpt-4o-mini"),
+        model_name=os.environ.get("CITATION_JUDGE_MODEL") or get_default_judge_model(),
         system_prompt=None,
         user_prompt=user_prompt,
         max_tokens=800,
@@ -293,7 +293,7 @@ async def score_with_citation_recall_async(question: str, claim: str, concatenat
     )
     try:
         response = await run_litellm_async(
-            model_name=os.environ.get("CITATION_JUDGE_MODEL", "gpt-4o-mini"),
+            model_name=os.environ.get("CITATION_JUDGE_MODEL") or get_default_judge_model(),
             system_prompt=None,
             user_prompt=user_prompt,
             max_tokens=800,
@@ -318,7 +318,7 @@ async def score_no_citation_recall_async(question: str, claim: str, full_respons
     )
     try:
         response = await run_litellm_async(
-            model_name=os.environ.get("CITATION_JUDGE_MODEL", "gpt-4o-mini"),
+            model_name=os.environ.get("CITATION_JUDGE_MODEL") or get_default_judge_model(),
             system_prompt=None,
             user_prompt=user_prompt,
             max_tokens=800,
@@ -350,7 +350,7 @@ async def score_citation_precision_async(question: str, claim: str, concatenated
     )
     try:
         response = await run_litellm_async(
-            model_name=os.environ.get("CITATION_JUDGE_MODEL", "gpt-4o-mini"),
+            model_name=os.environ.get("CITATION_JUDGE_MODEL") or get_default_judge_model(),
             system_prompt=None,
             user_prompt=user_prompt,
             max_tokens=800,

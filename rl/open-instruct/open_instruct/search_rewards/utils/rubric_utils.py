@@ -11,7 +11,7 @@ import uuid
 from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
 
-from open_instruct.search_rewards.utils.run_utils import extract_json_from_response, run_litellm, run_litellm_async
+from open_instruct.search_rewards.utils.run_utils import extract_json_from_response, run_litellm, run_litellm_async, get_default_judge_model
 from open_instruct.search_rewards.utils.format_utils import extract_answer_context_citations
 
 LOGGER = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def _score_property(response: str, question: str, prop: str, system_prompt: str 
         resp = run_litellm(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            model_name=os.environ.get("RUBRIC_JUDGE_MODEL", "gpt-4.1"),
+            model_name=os.environ.get("RUBRIC_JUDGE_MODEL") or get_default_judge_model(),
         )
 
         obj = extract_json_from_response(resp)
@@ -94,7 +94,7 @@ Return a score on a scale of 0 to 2 indicating how appropriate the response is b
         resp = await run_litellm_async(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            model_name=os.environ.get("RUBRIC_JUDGE_MODEL", "gpt-4.1"),
+            model_name=os.environ.get("RUBRIC_JUDGE_MODEL") or get_default_judge_model(),
         )
         # print("🚼 [Debug] Judge response: ", resp)
         obj = extract_json_from_response(resp)
@@ -254,7 +254,7 @@ Return a score on a scale of 0 to 2 indicating how appropriate the response is b
         resp = run_litellm(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            model_name=os.environ.get("RUBRIC_JUDGE_MODEL", "gpt-4.1"),
+            model_name=os.environ.get("RUBRIC_JUDGE_MODEL") or get_default_judge_model(),
         )
 
         obj = extract_json_from_response(resp)
@@ -381,7 +381,7 @@ Generate only the most impactful, non-redundant rubrics revealing meaningful qua
 """
 
 
-async def generate_instance_wise_adaptive_rubrics(question, response_list, existing_rubrics=None, model_name=os.environ.get("RUBRIC_GENERATION_MODEL", "gpt-4.1")):
+async def generate_instance_wise_adaptive_rubrics(question, response_list, existing_rubrics=None, model_name=os.environ.get("RUBRIC_GENERATION_MODEL") or get_default_judge_model()):
     
     prompt_suffix = f"Question: {question}\n\nResponses:\n"
     for i, response in enumerate(response_list):
@@ -444,7 +444,7 @@ async def _generate_instance_wise_adaptive_rubrics(responses, ground_truths, num
         # Create task for parallel execution
         if use_full_responses:
             num_subsampled_answers_list.append(len(response_list))
-            task = generate_instance_wise_adaptive_rubrics(question, response_list, existing_rubrics_str, model_name=os.environ.get("RUBRIC_GENERATION_MODEL", "gpt-4.1"))
+            task = generate_instance_wise_adaptive_rubrics(question, response_list, existing_rubrics_str, model_name=os.environ.get("RUBRIC_GENERATION_MODEL") or get_default_judge_model())
         else:   
             if answer_length_limit_in_words is not None:
                 # Shuffle answers before selecting to get diverse subset
@@ -461,7 +461,7 @@ async def _generate_instance_wise_adaptive_rubrics(responses, ground_truths, num
                         break
                 answer_list = selected_answers if selected_answers else answer_list[:2]
             num_subsampled_answers_list.append(len(answer_list))
-            task = generate_instance_wise_adaptive_rubrics(question, answer_list, existing_rubrics_str, model_name=os.environ.get("RUBRIC_GENERATION_MODEL", "gpt-4.1"))
+            task = generate_instance_wise_adaptive_rubrics(question, answer_list, existing_rubrics_str, model_name=os.environ.get("RUBRIC_GENERATION_MODEL") or get_default_judge_model())
         tasks.append(task)
     
     # Execute all tasks in parallel
